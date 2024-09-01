@@ -1,5 +1,0 @@
-./data/*
-./nginx.key
-./nginx.crt 
-*.key
-*.crt
