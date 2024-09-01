@@ -29,7 +29,6 @@ server {
         proxy_cache srs_cache;
         proxy_cache_key $scheme$proxy_host$uri$args;
         proxy_cache_valid  200 302 ${SRS_M3U8_EXPIRE}s;
-        add_header X-Cache-Status $upstream_cache_status;
     }
 
     location ~ /.+/.*\.(ts)$ {
