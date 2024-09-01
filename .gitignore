@@ -1,0 +1,5 @@
+./data/nginx-cache/*
+./nginx.key
+./nginx.crt 
+*.key
+*.crt
