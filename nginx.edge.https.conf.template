@@ -2,15 +2,24 @@ proxy_cache_path  /data/nginx-cache levels=1:2 keys_zone=srs_cache:8m max_size=1
 proxy_temp_path /data/nginx-cache/tmp;
 
 
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
 
-    listen 443 ssl default_server;
-    listen [::]:443 ssl default_server;
+map $http_user_agent $block_non_browser {
+    default          1;  # Block by default
+    "~*Mozilla"      0;  # Allow browsers with "Mozilla" in the User-Agent
+    "~*Chrome"       0;  # Allow browsers with "Chrome" in the User-Agent
+    "~*Safari"       0;  # Allow browsers with "Safari" in the User-Agent
+    "~*Opera"        0;  # Allow browsers with "Opera" in the User-Agent
+    "~*Edge"         0;  # Allow browsers with "Edge" in the User-Agent
+    "~*Android"      0;  # Allow Android default browser
+}
+
+server {
+
+    listen 443 ssl http2 default_server;
+    listen [::]:443 ssl http2 default_server;
     ssl_certificate ${ORYX_SSL_CRT};
     ssl_certificate_key ${ORYX_SSL_KEY};
-    ssl_protocols TLSv1.1 TLSv1.2 TLSv1.3;
+    ssl_protocols TLSv1.2 TLSv1.3;
     add_header Strict-Transport-Security "max-age=0";
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
@@ -20,6 +29,10 @@ server {
     proxy_cache_lock_age 300s;
     proxy_cache_lock_timeout 300s;
     proxy_cache_min_uses 1;
+
+    if ($block_non_browser) {
+        return 403;
+    }
 
 
     location ~ /.+/.*\.(m3u8)$ {
@@ -36,7 +49,26 @@ server {
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Expose-Headers;
 
-        add_header Access-Control-Allow-Origin "https://playmatic.live";
+        add_header Access-Control-Allow-Origin "${SRS_ALLOW_ORIGIN}";
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+        add_header 'Access-Control-Allow-Headers' 'Range';
+        add_header Accept-Ranges bytes;
+
+        add_header X-Cache-Status $upstream_cache_status;
+
+
+
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Headers' 'Range';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+
+
+      
     }
 
     location ~ /.+/.*\.(ts)$ {
@@ -46,7 +78,6 @@ server {
         proxy_cache srs_cache;
         proxy_cache_key $scheme$proxy_host$uri;
         proxy_cache_valid  200 302 ${SRS_TS_EXPIRE}s;
-        add_header X-Cache-Status $upstream_cache_status;
 
         proxy_hide_header Access-Control-Allow-Credentials;
         proxy_hide_header Access-Control-Allow-Headers;
@@ -54,6 +85,21 @@ server {
         proxy_hide_header Access-Control-Allow-Origin;
         proxy_hide_header Access-Control-Expose-Headers;
 
-        add_header Access-Control-Allow-Origin "https://playmatic.live";
+        add_header Access-Control-Allow-Origin "${SRS_ALLOW_ORIGIN}";
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range';
+        add_header 'Access-Control-Allow-Headers' 'Range';
+        add_header Accept-Ranges bytes;
+
+        add_header X-Cache-Status $upstream_cache_status;
+
+         if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Headers' 'Range';
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain charset=UTF-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+
     }
 }
